@@ -19,9 +19,9 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Usuário temporário para o painel
+# Usuário temporário para o painel (admin / studio123)
 USER_CREDENTIALS = {
-    "admin": "studio123"  # Usuario: admin | Senha: studio123
+    "admin": "studio123"
 }
 
 class User(UserMixin):
@@ -150,13 +150,12 @@ def upload_file():
     
     return "Extensão de arquivo não permitida!", 400
 
-# Rota para permitir baixar os arquivos enviados de forma estática
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     from flask import send_from_directory
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# --- SUAS ROTAS ANTIGAS DA API ---
+# --- SUAS ROTAS DA API DO STUDIO ---
 
 @app.route('/api/studio-check', methods=['GET', 'POST'])
 def studio_check():
@@ -166,4 +165,24 @@ def studio_check():
     
     return jsonify({
         "sucesso": True,
-        "versao_obrigatoria
+        "versao_obrigatoria": "Future-Is-Bright-v2",
+        "scripts_disponiveis": [
+            {"id": 1, "nome": "Base_Ajustes", "autor": "ZX"},
+            {"id": 2, "nome": "Anti_Lag_Shaders", "autor": "ZX"}
+        ]
+    }), 200
+
+@app.route('/toolbox', methods=['GET'])
+def get_custom_toolbox():
+    return jsonify({
+        "sucesso": True,
+        "itens": [
+            {"id": 1, "nome": "Spawn Point Oficial", "tipo": "Model", "asset_id": 1716327318},
+            {"id": 2, "nome": "Bloco Neon Verde", "tipo": "Model", "asset_id": 511061730},
+            {"id": 3, "nome": "Modelo de Teste ZX", "tipo": "Model", "asset_id": 60790132}
+        ]
+    }), 200
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
