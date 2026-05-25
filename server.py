@@ -37,28 +37,17 @@ def load_user(user_id):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# --- TEMPLATES HTML EM LINHA ---
-HTML_LAYOUT = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Studio Service</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; padding: 50px; }
-        .container { max-width: 500px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.5); }
-        input[type="text"], input[type="password"], input[type="file"] { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
-        input[type="submit"], .btn { background: #06b6d4; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }
-        .btn-logout { background: #ef4444; }
-        .msg { color: #22c55e; margin: 10px 0; }
-        .err { color: #ef4444; margin: 10px 0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        {% block content %}{% endblock %}
-    </div>
-</body>
-</html>
+# Estilos CSS unificados para o painel escuro
+BASE_CSS = """
+<style>
+    body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; padding: 50px; }
+    .container { max-width: 500px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.5); }
+    input[type="text"], input[type="password"], input[type="file"] { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; background: #2d2d2d; color: #fff; }
+    input[type="submit"], .btn { background: #06b6d4; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin: 5px; }
+    .btn-logout { background: #ef4444; }
+    .msg { color: #22c55e; margin: 10px 0; }
+    .err { color: #ef4444; margin: 10px 0; }
+</style>
 """
 
 # --- ROTAS WEB PRINCIPAIS ---
@@ -67,15 +56,22 @@ HTML_LAYOUT = """
 def home():
     arquivos_no_servidor = os.listdir(app.config['UPLOAD_FOLDER'])
     
-    return render_template_string(HTML_LAYOUT + """
-        {% block content %}
+    html_home = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Studio Service</title>
+        {BASE_CSS}
+    </head>
+    <body>
+        <div class="container">
             <h1>Studio Service 🛠️</h1>
             <p>Status do Sistema: <span style="color:#22c55e;">Online</span></p>
             <hr>
             
-            {% if current_user.is_authenticated %}
+            {{% if current_user.is_authenticated %}}
                 <h3>Painel do Desenvolvedor</h3>
-                <p>Logado como: <b>{{ current_user.id }}</b></p>
+                <p>Logado como: <b>{{{{ current_user.id }}}}</b></p>
                 
                 <form method="POST" action="/upload" enctype="multipart/form-data">
                     <label>Postar arquivo (.rbxl, .txt, .lua, .py):</label><br>
@@ -84,21 +80,24 @@ def home():
                 </form>
                 <br>
                 <a href="/logout" class="btn btn-logout">Sair da Conta</a>
-            {% else %}
+            {{% else %}}
                 <h3>Menu do Sistema</h3>
                 <p>Você precisa estar logado para enviar arquivos ou scripts.</p>
                 <a href="/login" class="btn">Fazer Login de Desenvolvedor</a>
-            {% endif %}
+            {{% endif %}}
             
             <hr>
             <h4>Arquivos Disponíveis no Servidor:</h4>
             <ul style="text-align: left; list-style-type: square;">
-                {% for arquivo in arquivos %}
-                    <li><a href="/uploads/{{ arquivo }}" style="color:#06b6d4;" download>{{ arquivo }}</a></li>
-                {% endfor %}
+                {{% for arquivo in arquivos %}}
+                    <li><a href="/uploads/{{{{ arquivo }}}}" style="color:#06b6d4;" download>{{{{ arquivo }}}}</a></li>
+                {{% endfor %}}
             </ul>
-        {% endblock %}
-    """, arquivos=arquivos_no_servidor)
+        </div>
+    </body>
+    </html>
+    """
+    return render_template_string(html_home, arquivos=arquivos_no_servidor)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -114,10 +113,17 @@ def login():
         else:
             erro = "Usuário ou senha incorretos."
             
-    return render_template_string(HTML_LAYOUT + """
-        {% block content %}
+    html_login = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Studio Service - Login</title>
+        {BASE_CSS}
+    </head>
+    <body>
+        <div class="container">
             <h2>Login de Desenvolvedor</h2>
-            {% if erro %} <p class="err">{{ erro }}</p> {% endif %}
+            {{% if erro %}} <p class="err">{{{{ erro }}}}</p> {{% endif %}}
             <form method="POST">
                 <input type="text" name="username" placeholder="Usuário" required><br>
                 <input type="password" name="password" placeholder="Senha" required><br>
@@ -125,8 +131,11 @@ def login():
             </form>
             <br>
             <a href="/" style="color:#aaa;">Voltar ao Menu</a>
-        {% endblock %}
-    """, erro=erro)
+        </div>
+    </body>
+    </html>
+    """
+    return render_template_string(html_login, erro=erro)
 
 @app.route('/logout')
 @login_required
