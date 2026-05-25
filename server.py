@@ -1,9 +1,10 @@
-from flask import Flask, jsonify, request, render_template_string, redirect, url_for, flash
+from flask import Flask, jsonify, request, render_template_string, redirect, url_for
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
 import os
 
 app = Flask(__name__)
+# Chave secreta necessária para manter a sessão do usuário ativa
 app.secret_key = os.environ.get("SECRET_KEY", "uma-chave-secreta-muito-segura")
 
 # Configurações para upload de arquivos
@@ -19,7 +20,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Usuário temporário para o painel (admin / studio123)
+# Usuário único para o seu painel (Usuário: admin | Senha: studio123)
 USER_CREDENTIALS = {
     "admin": "studio123"
 }
@@ -37,18 +38,30 @@ def load_user(user_id):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Estilos CSS unificados para o painel escuro
-BASE_CSS = """
-<style>
-    body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; padding: 50px; }
-    .container { max-width: 500px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.5); }
-    input[type="text"], input[type="password"], input[type="file"] { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; background: #2d2d2d; color: #fff; }
-    input[type="submit"], .btn { background: #06b6d4; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin: 5px; }
-    .btn-logout { background: #ef4444; }
-    .msg { color: #22c55e; margin: 10px 0; }
-    .err { color: #ef4444; margin: 10px 0; }
-</style>
-"""
+# Função auxiliar para renderizar as páginas com o mesmo visual escuro sem quebrar o Jinja2
+def renderizar_pagina(conteudo_interno, **contexto):
+    html_completo = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Studio Service</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; padding: 50px; }
+            .container { max-width: 500px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.5); }
+            input[type="text"], input[type="password"], input[type="file"] { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; background: #2d2d2d; color: #fff; }
+            input[type="submit"], .btn { background: #06b6d4; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin: 5px; }
+            .btn-logout { background: #ef4444; }
+            .err { color: #ef4444; margin: 10px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+    """ + conteudo_interno + """
+        </div>
+    </body>
+    </html>
+    """
+    return render_template_string(html_completo, **contexto)
 
 # --- ROTAS WEB PRINCIPAIS ---
 
@@ -56,48 +69,37 @@ BASE_CSS = """
 def home():
     arquivos_no_servidor = os.listdir(app.config['UPLOAD_FOLDER'])
     
-    html_home = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Studio Service</title>
-        {BASE_CSS}
-    </head>
-    <body>
-        <div class="container">
-            <h1>Studio Service 🛠️</h1>
-            <p>Status do Sistema: <span style="color:#22c55e;">Online</span></p>
-            <hr>
-            
-            {{% if current_user.is_authenticated %}}
-                <h3>Painel do Desenvolvedor</h3>
-                <p>Logado como: <b>{{{{ current_user.id }}}}</b></p>
-                
-                <form method="POST" action="/upload" enctype="multipart/form-data">
-                    <label>Postar arquivo (.rbxl, .txt, .lua, .py):</label><br>
-                    <input type="file" name="file" required><br>
-                    <input type="submit" value="Enviar Arquivo">
-                </form>
-                <br>
-                <a href="/logout" class="btn btn-logout">Sair da Conta</a>
-            {{% else %}}
-                <h3>Menu do Sistema</h3>
-                <p>Você precisa estar logado para enviar arquivos ou scripts.</p>
-                <a href="/login" class="btn">Fazer Login de Desenvolvedor</a>
-            {{% endif %}}
-            
-            <hr>
-            <h4>Arquivos Disponíveis no Servidor:</h4>
-            <ul style="text-align: left; list-style-type: square;">
-                {{% for arquivo in arquivos %}}
-                    <li><a href="/uploads/{{{{ arquivo }}}}" style="color:#06b6d4;" download>{{{{ arquivo }}}}</a></li>
-                {{% endfor %}}
-            </ul>
-        </div>
-    </body>
-    </html>
+    conteudo_home = """
+    <h1>Studio Service 🛠️</h1>
+    <p>Status do Sistema: <span style="color:#22c55e;">Online</span></p>
+    <hr>
+    
+    {% if current_user.is_authenticated %}
+        <h3>Painel do Desenvolvedor</h3>
+        <p>Logado como: <b>{{ current_user.id }}</b></p>
+        
+        <form method="POST" action="/upload" enctype="multipart/form-data">
+            <label>Postar arquivo (.rbxl, .txt, .lua, .py):</label><br>
+            <input type="file" name="file" required><br>
+            <input type="submit" value="Enviar Arquivo">
+        </form>
+        <br>
+        <a href="/logout" class="btn btn-logout">Sair da Conta</a>
+    {% else %}
+        <h3>Menu do Sistema</h3>
+        <p>Você precisa estar logado para enviar arquivos ou scripts.</p>
+        <a href="/login" class="btn">Fazer Login de Desenvolvedor</a>
+    {% endif %}
+    
+    <hr>
+    <h4>Arquivos Disponíveis no Servidor:</h4>
+    <ul style="text-align: left; list-style-type: square;">
+        {% for arquivo in arquivos %}
+            <li><a href="/uploads/{{ arquivo }}" style="color:#06b6d4;" download>{{ arquivo }}</a></li>
+        {% endfor %}
+    </ul>
     """
-    return render_template_string(html_home, arquivos=arquivos_no_servidor)
+    return renderizar_pagina(conteudo_home, arquivos=arquivos_no_servidor)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -113,29 +115,18 @@ def login():
         else:
             erro = "Usuário ou senha incorretos."
             
-    html_login = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Studio Service - Login</title>
-        {BASE_CSS}
-    </head>
-    <body>
-        <div class="container">
-            <h2>Login de Desenvolvedor</h2>
-            {{% if erro %}} <p class="err">{{{{ erro }}}}</p> {{% endif %}}
-            <form method="POST">
-                <input type="text" name="username" placeholder="Usuário" required><br>
-                <input type="password" name="password" placeholder="Senha" required><br>
-                <input type="submit" value="Entrar">
-            </form>
-            <br>
-            <a href="/" style="color:#aaa;">Voltar ao Menu</a>
-        </div>
-    </body>
-    </html>
+    conteudo_login = """
+    <h2>Login de Desenvolvedor</h2>
+    {% if erro %} <p class="err">{{ erro }}</p> {% endif %}
+    <form method="POST">
+        <input type="text" name="username" placeholder="Usuário" required><br>
+        <input type="password" name="password" placeholder="Senha" required><br>
+        <input type="submit" value="Entrar">
+    </form>
+    <br>
+    <a href="/" style="color:#aaa;">Voltar ao Menu</a>
     """
-    return render_template_string(html_login, erro=erro)
+    return renderizar_pagina(conteudo_login, erro=erro)
 
 @app.route('/logout')
 @login_required
@@ -164,7 +155,7 @@ def uploaded_file(filename):
     from flask import send_from_directory
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# --- SUAS ROTAS DA API DO STUDIO ---
+# --- SUAS ROTAS DA API DO STUDIO (Intocadas, funcionam perfeitamente para o roblox) ---
 
 @app.route('/api/studio-check', methods=['GET', 'POST'])
 def studio_check():
