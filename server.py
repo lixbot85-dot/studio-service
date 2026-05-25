@@ -93,12 +93,12 @@ def renderizar_pagina(conteudo_interno, **contexto):
     <body>
         <div class="container">
             <div class="navbar">
-                <a href="/" class="btn" style="background:#0284c7;">🏠 Home</a>
+                <a href="/" class="btn" style="background:#0284c7;">Home</a>
                 <a href="/explore" class="btn" style="background:#2563eb;">🌐 Explore Marketplace</a>
                 {% if current_user.is_authenticated %}
-                    <a href="/publish" class="btn" style="background:#16a34a;">📤 Publicar Script</a>
+                    <a href="/publish" class="btn" style="background:#16a34a;">Publicar Script</a>
                     {% if current_user.role == 'adm' %}
-                        <a href="/panel" class="btn" style="background:#7c3aed;">⚙️ Painel de Admin</a>
+                        <a href="/panel" class="btn" style="background:#7c3aed;">Painel de Admin</a>
                     {% endif %}
                     <a href="/logout" class="btn btn-logout" style="font-size:12px; padding:6px 12px; align-self:center;">Sair</a>
                 {% else %}
@@ -229,9 +229,9 @@ def explore():
     <h1>🌐 Explore Marketplace</h1>
     <div class="filter-container" style="margin-bottom:15px;">
         <a href="/explore?filter=all" class="btn" style="background:#4b5563;">Tudo</a>
-        <a href="/explore?filter=Para Minecraft" class="btn" style="background:#15803d;">Para Minecraft ⛏️</a>
-        <a href="/explore?filter=Para servidor" class="btn" style="background:#1d4ed8;">Para Servidor 🖥️</a>
-        <a href="/explore?filter=Para local" class="btn" style="background:#b45309;">Para Local 💻</a>
+        <a href="/explore?filter=Para Minecraft" class="btn" style="background:#15803d;">Para Minecraft</a>
+        <a href="/explore?filter=Para servidor" class="btn" style="background:#1d4ed8;">Para Servidor</a>
+        <a href="/explore?filter=Para local" class="btn" style="background:#b45309;">Para Local</a>
     </div>
     {% for arq in arquivos %}
         <div class="file-item">
@@ -274,12 +274,12 @@ def report_user():
                     "reporter": current_user.id,
                     "reason": texto_final_reporte
                 }).execute()
-                return renderizar_pagina("<h3>🚨 Reporte enviado com sucesso à moderação! Obrigado por ajudar a manter a ordem.</h3><br><a href='/' class='btn'>Voltar</a>")
+                return renderizar_pagina("<h3>!Reporte enviado com sucesso à moderação! Obrigado por ajudar a manter a ordem.</h3><br><a href='/' class='btn'>Voltar</a>")
             except Exception as e:
                 return renderizar_pagina(f"<h3>Erro ao enviar reporte: {e}</h3>")
                 
     return renderizar_pagina("""
-    <h2>🚨 Denunciar Infração / Abuso</h2>
+    <h2>!Denunciar Infração / Abuso!</h2>
     <p>Você está reportando o conteúdo postado por: <b style="color:#ef4444;">{{ target }}</b></p>
     <form method="POST">
         <input type="hidden" name="reported_user" value="{{ target }}">
@@ -317,15 +317,15 @@ def publish():
             return renderizar_pagina(f"<h3>Erro ao publicar: {e}</h3>")
             
     return renderizar_pagina("""
-    <h2>📤 Publicar Novo Script Externo</h2>
+    <h2>Publicar Novo Script Externo</h2>
     <form method="POST">
         <input type="text" name="title" placeholder="Nome do arquivo (Ex: anti-lag.lua)" required><br>
         <textarea name="description" placeholder="Escreva a descrição do que o seu script faz..."></textarea><br>
         <label><b>Destinação/Tag:</b></label><br>
         <select name="tag">
-            <option value="Para local">Para local 💻</option>
-            <option value="Para Minecraft">Para Minecraft ⛏️</option>
-            <option value="Para servidor">Para servidor 🖥️</option>
+            <option value="Para local">Para local</option>
+            <option value="Para Minecraft">Para Minecraft</option>
+            <option value="Para servidor">Para servidor</option>
         </select><br><br>
         <textarea name="code" placeholder="Cole o código fonte aqui..." style="height:220px;" required></textarea><br>
         <input type="submit" value="Publicar no Marketplace" style="background:#16a34a;">
@@ -371,11 +371,11 @@ def panel():
             print(f"Erro ao carregar painel admin: {e}")
             
     conteudo_panel = """
-    <h2>⚙️ Painel do Administrador (Controle Geral)</h2>
+    <h2>Painel do Administrador (Controle Geral)</h2>
     {% if msg %} <p class="sucesso">{{ msg }}</p> {% endif %}
     <hr>
     
-    <h3>🔍 Explorador e Gerenciador de Usuários</h3>
+    <h3>Explorador e Gerenciador de Usuários</h3>
     <input type="text" id="userInput" onkeyup="filtrarUsuarios()" placeholder="Procurar nome de usuário rapidamente..." style="max-width:100%;">
     <div id="userList" style="margin-top:10px;">
         {% for u in users %}
@@ -407,11 +407,11 @@ def panel():
     </div>
     
     <hr>
-    <h3>🚨 Menu de Monitoramento de Reportes</h3>
+    <h3>!!Menu de Monitoramento de Reportes!!</h3>
     <div style="text-align:left; background:#262626; padding:12px; border-radius:6px; border:1px solid #333;">
         {% for rep in reports %}
             <div style="border-bottom: 1px solid #333; padding: 8px 0;">
-                <p style="margin:4px 0;">⚠️ <b>Acusado:</b> <span style="color:#ef4444; font-weight:bold;">{{ rep.reported_user }}</span> | <b>Por:</b> {{ rep.reporter }}</p>
+                <p style="margin:4px 0;">!<b>Acusado:</b> <span style="color:#ef4444; font-weight:bold;">{{ rep.reported_user }}</span> | <b>Por:</b> {{ rep.reporter }}</p>
                 <p style="margin:4px 0; color:#aaa; font-size:14px;">• Detalhes: <i>{{ rep.reason }}</i></p>
                 <form method="POST" style="margin-top:4px;">
                     <input type="hidden" name="target_user" value="{{ rep.reported_user }}">
@@ -489,9 +489,9 @@ def edit_file(filename):
         
         <label><b>Destinação/Tag do Script:</b></label><br>
         <select name="tag">
-            <option value="Para local" {% if info.tags == 'Para local' %}selected{% endif %}>Para local 💻</option>
-            <option value="Para Minecraft" {% if info.tags == 'Para Minecraft' %}selected{% endif %}>Para Minecraft ⛏️</option>
-            <option value="Para servidor" {% if info.tags == 'Para servidor' %}selected{% endif %}>Para servidor 🖥️</option>
+            <option value="Para local" {% if info.tags == 'Para local' %}selected{% endif %}>Para local</option>
+            <option value="Para Minecraft" {% if info.tags == 'Para Minecraft' %}selected{% endif %}>Para Minecraft</option>
+            <option value="Para servidor" {% if info.tags == 'Para servidor' %}selected{% endif %}>Para servidor</option>
         </select><br>
         
         <label><b>Visibilidade Segura:</b></label><br>
