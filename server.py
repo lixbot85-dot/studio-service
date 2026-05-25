@@ -16,9 +16,6 @@ supabase_client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
-        
-        # Tenta criar a tabela de usuários caso ela não exista (Executado via RPC ou verificação simples)
-        # Nota: Idealmente a tabela 'usuarios_service' deve ter as colunas: username (text, primary key), password (text), role (text)
     except Exception as e:
         print(f"Erro ao conectar no Supabase: {e}")
 
@@ -36,14 +33,13 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    # O admin padrão do sistema com cargo 'adm'
     if user_id == "admin":
         return User("admin", role="adm")
     
-    # Busca usuários registrados dinamicamente no banco de dados do Supabase
+    # Busca na tabela CORRETA: 'users_service'
     if supabase_client:
         try:
-            res = supabase_client.table("usuarios_service").select("*").eq("username", user_id).execute()
+            res = supabase_client.table("users_service").select("*").eq("username", user_id).execute()
             if res.data and len(res.data) > 0:
                 dados_user = res.data[0]
                 return User(dados_user['username'], role=dados_user.get('role', 'user'))
@@ -65,13 +61,16 @@ def renderizar_pagina(conteudo_interno, **contexto):
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; text-align: center; padding: 40px 20px; margin: 0; }
             .container { max-width: 750px; margin: auto; background: #1e1e1e; padding: 30px; border-radius: 12px; box-shadow: 0px 4px 20px rgba(0,0,0,0.6); border: 1px solid #2d2d2d; }
             h1, h2, h3, h4 { color: #fff; margin-top: 0; }
-            input[type="text"], input[type="password"], input[type="file"] { width: 100%; max-width: 400px; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #3d3d3d; background: #2a2a2a; color: #fff; box-sizing: border-box; }
+            input[type="text"], input[type="password"], input[type="file"], textarea { width: 100%; max-width: 400px; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #3d3d3d; background: #2a2a2a; color: #fff; box-sizing: border-box; }
+            textarea { max-width: 100%; height: 250px; font-family: 'Courier New', Courier, monospace; font-size: 14px; }
             input[type="submit"], .btn { background: #06b6d4; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: bold; transition: background 0.2s; margin: 5px; }
             input[type="submit"]:hover, .btn:hover { background: #0891b2; }
             .btn-logout { background: #ef4444; }
             .btn-logout:hover { background: #dc2626; }
             .btn-del { background: #b91c1c; padding: 4px 10px; font-size: 13px; }
             .btn-del:hover { background: #991b1b; }
+            .btn-edit { background: #eab308; color: #000; padding: 4px 10px; font-size: 13px; }
+            .btn-edit:hover { background: #ca8a04; }
             .btn-copy { background: #4b5563; padding: 4px 10px; font-size: 13px; }
             .btn-copy:hover { background: #374151; }
             .badge { background: #22c55e; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; vertical-align: middle; }
@@ -155,6 +154,7 @@ def home():
                 <div class="actions">
                     <button class="btn btn-copy" onclick="copiarTexto(window.location.origin + '/uploads/{{ arquivo }}')">Copiar Link</button>
                     {% if current_user.is_authenticated and current_user.role == 'adm' %}
+                        <a href="/edit-file/{{ arquivo }}" class="btn btn-edit">Editar</a>
                         <a href="/delete/{{ arquivo }}" class="btn btn-del" onclick="return confirm('Tem certeza que deseja deletar permanentemente o arquivo {{ arquivo }}?')">Deletar</a>
                     {% endif %}
                 </div>
@@ -173,16 +173,15 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Validação do Admin Fixo 'adm'
         if username == "admin" and password == "studio123":
             user = User("admin", role="adm")
             login_user(user)
             return redirect(url_for('home'))
             
-        # Validação dinâmica no Supabase
+        # Busca na tabela CORRETA: 'users_service'
         if supabase_client:
             try:
-                res = supabase_client.table("usuarios_service").select("*").eq("username", username).execute()
+                res = supabase_client.table("users_service").select("*").eq("username", username).execute()
                 if res.data and len(res.data) > 0:
                     dados_user = res.data[0]
                     if dados_user['password'] == password:
@@ -208,7 +207,7 @@ def login():
     """
     return renderizar_pagina(conteudo_login, erro=erro)
 
-# NOVA ROTA REQUISITADA: Sistema de Registro em URL Separada (users-service)
+# ROTA: Users Service com a tabela certa 'users_service'
 @app.route('/users-service', methods=['GET', 'POST'])
 def users_service():
     erro = None
@@ -223,20 +222,20 @@ def users_service():
             erro = "Usuário ou senha muito curtos."
         elif supabase_client:
             try:
-                # Verifica se usuário já existe
-                check = supabase_client.table("usuarios_service").select("*").eq("username", username).execute()
+                # Busca na tabela CORRETA: 'users_service'
+                check = supabase_client.table("users_service").select("*").eq("username", username).execute()
                 if check.data and len(check.data) > 0:
                     erro = "Este nome de usuário já está cadastrado!"
                 else:
-                    # Registra o novo usuário padrão ('user') no banco permanente
-                    supabase_client.table("usuarios_service").insert({
+                    # Insere na tabela CORRETA: 'users_service'
+                    supabase_client.table("users_service").insert({
                         "username": username,
                         "password": password,
                         "role": "user"
                     }).execute()
                     sucesso = "Conta criada com sucesso! Você já pode fazer login."
             except Exception as e:
-                erro = f"Erro ao registrar no banco de dados. Verifique a tabela: {e}"
+                erro = f"Erro ao registrar no banco de dados: {e}"
         else:
             erro = "Conexão com a nuvem indisponível."
 
@@ -258,6 +257,46 @@ def users_service():
     """
     return renderizar_pagina(conteudo_registro, erro=erro, sucesso=sucesso)
 
+# NOVA ROTA: Editor de código embutido no Painel
+@app.route('/edit-file/<filename>', methods=['GET', 'POST'])
+@login_required
+def edit_file(filename):
+    if current_user.role != 'adm':
+        return "Acesso Negado", 403
+        
+    conteudo_arquivo = ""
+    if request.method == 'POST':
+        novo_conteudo = request.form.get('code_content', '')
+        try:
+            # Faz o upload substituindo o arquivo antigo com o novo texto digitado
+            supabase_client.storage.from_(BUCKET_NAME).upload(
+                path=filename,
+                file=novo_conteudo.encode('utf-8'),
+                file_options={"cache-control": "3600", "upsert": "true"}
+            )
+            return redirect(url_for('home'))
+        except Exception as e:
+            print(f"Erro ao salvar arquivo: {e}")
+            
+    # Carrega o código atual do Supabase para exibir na caixa de texto
+    if supabase_client:
+        try:
+            conteudo_arquivo = supabase_client.storage.from_(BUCKET_NAME).download(filename).decode('utf-8')
+        except Exception as e:
+            conteudo_arquivo = f"-- Erro ao ler o arquivo ou arquivo binário (.rbxl): {e}"
+
+    conteudo_editor = f"""
+    <h2>📝 Editando: {filename}</h2>
+    <p style="color:#aaa; font-size:14px;">Modifique o script diretamente abaixo e salve na nuvem</p>
+    
+    <form method="POST">
+        <textarea name="code_content" spellcheck="false">{conteudo_arquivo}</textarea><br>
+        <input type="submit" value="Salvar Alterações" style="background:#22c55e;">
+        <a href="/" class="btn" style="background:#4b5563;">Cancelar</a>
+    </form>
+    """
+    return renderizar_pagina(conteudo_editor)
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -267,9 +306,8 @@ def logout():
 @app.route('/upload', methods=['POST'])
 @login_required
 def upload_file():
-    # Bloqueia uploads se o usuário logado não pertencer à role 'adm'
     if current_user.role != 'adm':
-        return "Acesso Negado: Apenas administradores podem fazer uploads.", 403
+        return "Acesso Negado", 403
         
     if 'file' not in request.files or not supabase_client:
         return redirect(url_for('home'))
@@ -289,7 +327,7 @@ def upload_file():
                 file_options={"cache-control": "3600", "upsert": "true"}
             )
         except Exception as e:
-            print(f"Erro no upload para o Supabase: {e}")
+            print(f"Erro no upload: {e}")
             
         return redirect(url_for('home'))
     
@@ -298,15 +336,14 @@ def upload_file():
 @app.route('/delete/<filename>')
 @login_required
 def delete_file(filename):
-    # Bloqueia exclusões se o usuário logado não pertencer à role 'adm'
     if current_user.role != 'adm':
-        return "Acesso Negado: Apenas administradores podem deletar arquivos.", 403
+        return "Acesso Negado", 403
         
     if supabase_client:
         try:
             supabase_client.storage.from_(BUCKET_NAME).remove([filename])
         except Exception as e:
-            print(f"Erro ao deletar arquivo do Supabase: {e}")
+            print(f"Erro ao deletar: {e}")
             
     return redirect(url_for('home'))
 
